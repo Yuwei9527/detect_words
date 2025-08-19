@@ -26,7 +26,7 @@ from pdf2image import convert_from_path
 
 import torch
 from transformers import Qwen2VLForConditionalGeneration, AutoTokenizer, AutoProcessor
-from transformers import Qwen2_5_VLForConditionalGeneration
+from transformers import Qwen2_5_VLForConditionalGeneration # TorchAoConfig
 
 from qwen_vl_utils import process_vision_info
 import PIL.ImageDraw as ImageDraw
@@ -47,10 +47,9 @@ import datetime
 # pip install plum-dispatch==1.7.4
 # from docx2pdf import convert # doc不支援
 
-import math
+# import math
 import torchvision.transforms as T
-from decord import VideoReader, cpu
-from PIL import Image
+# from decord import VideoReader, cpu
 from torchvision.transforms.functional import InterpolationMode
 from transformers import AutoModel, AutoTokenizer
 import re
@@ -189,6 +188,7 @@ prompt_get_訓練日期 = '''
 请遵守以上规则。
 '''
 
+# TODO
 # 辨識結果旋轉與否
 trigger_rotated = True
 
@@ -206,7 +206,7 @@ max_pixels = 1024*28*28
 
 vlm_correction_dict_dir = './錯字寶典.json'
 time_gt_dir =  'C:/Users/aiuser/Desktop/lai/detect_pdf_words/完工驗收資料(Sample)_0619_實際日期時間.xlsx'
-save_dir = 'C:/Users/aiuser/Desktop/lai/detect_pdf_words/detection/prompt_v6_test_rotated_time_testing_0815/'
+save_dir = 'C:/Users/aiuser/Desktop/lai/detect_pdf_words/detection/prompt_v6_test_rotated_time_testing_0816/' # 共耗時9小時28分鐘左右
 root = 'C:/Users/aiuser/Desktop/lai/detect_pdf_words/完工驗收資料(Sample)_0619/'
 
 # 廠商要看的標題
@@ -289,38 +289,43 @@ with open(save_dir + '/' + model_type.split('/')[-1] + '.md', 'w', encoding="utf
 # )
 
 # We recommend enabling flash_attention_2 for better acceleration and memory saving, especially in multi-image and video scenarios.
+# quantization_config = TorchAoConfig("int4_weight_only", group_size=128)
+
 if model_type == 'Qwen/Qwen2-VL-7B-Instruct':
     model = Qwen2VLForConditionalGeneration.from_pretrained(
         model_type,
         torch_dtype= torch_dtype,
-        # attn_implementation="flash_attention_2",
+        attn_implementation="sdpa", # "flash_attention_2"
         device_map="auto",
+        # quantization_config=quantization_config,
     )
-    processor = AutoProcessor.from_pretrained(model_type, min_pixels=min_pixels, max_pixels=max_pixels)
+    processor = AutoProcessor.from_pretrained(model_type, min_pixels=min_pixels, max_pixels=max_pixels, use_fast=True)
 elif model_type == 'Qwen/Qwen2.5-VL-3B-Instruct':
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
         model_type,
         torch_dtype= torch_dtype,
-        # attn_implementation="flash_attention_2",
+        attn_implementation="sdpa", # "flash_attention_2"
         device_map="auto",
+        # quantization_config=quantization_config,
     )
-    processor = AutoProcessor.from_pretrained(model_type, min_pixels=min_pixels, max_pixels=max_pixels)
+    processor = AutoProcessor.from_pretrained(model_type, min_pixels=min_pixels, max_pixels=max_pixels, use_fast=True)
 elif model_type == 'Qwen/Qwen2.5-VL-7B-Instruct':
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
         model_type,
         torch_dtype= torch_dtype,
-        # attn_implementation="flash_attention_2",
+        attn_implementation="sdpa", # "flash_attention_2"
         device_map="auto",
+        # quantization_config=quantization_config,
     )
-    processor = AutoProcessor.from_pretrained(model_type, min_pixels=min_pixels, max_pixels=max_pixels)
+    processor = AutoProcessor.from_pretrained(model_type, min_pixels=min_pixels, max_pixels=max_pixels, use_fast=True)
 elif model_type == 'Qwen/Qwen2.5-VL-7B-Instruct-AWQ':
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
     "Qwen/Qwen2.5-VL-32B-Instruct",
     torch_dtype=torch_dtype,
-    # attn_implementation="flash_attention_2",
+    attn_implementation="sdpa", # "flash_attention_2"
     device_map="auto",
     )
-    processor = AutoProcessor.from_pretrained(model_type, min_pixels=min_pixels, max_pixels=max_pixels)
+    processor = AutoProcessor.from_pretrained(model_type, min_pixels=min_pixels, max_pixels=max_pixels, use_fast=True)
     
 elif model_type == 'OpenGVLab/InternVL3-8B':
     model = AutoModel.from_pretrained(
@@ -543,7 +548,6 @@ def text_processing(text):
     return output_text_convert
 
 
-#%%
 class CONVERT_TIME_FORMAT():
     def __init__(self, detect_time):
         self.detect_time = detect_time
@@ -651,6 +655,8 @@ all_punct = punct + ch_punct
 clahe = cv2.createCLAHE(clipLimit=8.0, tileGridSize=(8,8)) # clipLimit==10.0 OK
 
 for full_dir in tqdm(all_files_dir):
+# for full_dir in tqdm(all_files_dir[703:]):
+# for full_dir in tqdm(['C:\\Users\\aiuser\\Desktop\\lai\\detect_pdf_words\\完工驗收資料(Sample)_0619\\C04工作安全分析JSA記錄 +日期擷取\\19-2 AAAA1Z08 JSA.pdf']): # 除錯用
     filename = full_dir.split('\\')[-1]
     filename_ext = filename.split('.')[-1].lower()
     folder = full_dir.split(filename)[0].split(str(Path(root)))[1].replace('\\', '/') # 檔案完整路徑 去掉 root filename
